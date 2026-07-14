@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Inject,
-  Param,
-  Query,
-} from "@midwayjs/core";
+import { Controller, Get, Inject, Param, Query } from "@midwayjs/core";
 import { MatchService } from "../service/match.service";
 import { ErrorCodes, createError } from "../util/error";
 

@@ -158,8 +158,7 @@ function insertMatch(
 function createRepo(db: DatabaseSync): MatchRepo {
   const fetchMatchById = (id: number): MatchData | null => {
     const row = db.prepare(`${MATCH_SELECT} WHERE m.id = ?`).get(id) as
-      | MatchRow
-      | undefined;
+      MatchRow | undefined;
     return row ? mapMatchRow(row) : null;
   };
 
@@ -397,16 +396,116 @@ test("getStandings sorts by points > goalDifference > goalsFor > teamName", asyn
   const d9 = insertTeam(db, "Dummy9", "DM9", "A");
   const d10 = insertTeam(db, "Dummy10", "DM10", "A");
 
-  insertMatch(db, a, d6, "group", "A", "2026-06-11T13:00:00.000Z", 2, 0, "finished");
-  insertMatch(db, a, d7, "group", "A", "2026-06-11T16:00:00.000Z", 1, 0, "finished");
-  insertMatch(db, b, d8, "group", "A", "2026-06-12T13:00:00.000Z", 3, 0, "finished");
-  insertMatch(db, d9, b, "group", "A", "2026-06-12T16:00:00.000Z", 1, 0, "finished");
-  insertMatch(db, c, d10, "group", "A", "2026-06-13T13:00:00.000Z", 4, 1, "finished");
-  insertMatch(db, d6, c, "group", "A", "2026-06-13T16:00:00.000Z", 3, 0, "finished");
-  insertMatch(db, d, d7, "group", "A", "2026-06-14T13:00:00.000Z", 2, 1, "finished");
-  insertMatch(db, d8, d, "group", "A", "2026-06-14T16:00:00.000Z", 1, 0, "finished");
-  insertMatch(db, e, d9, "group", "A", "2026-06-15T13:00:00.000Z", 2, 0, "finished");
-  insertMatch(db, d10, e, "group", "A", "2026-06-15T16:00:00.000Z", 2, 0, "finished");
+  insertMatch(
+    db,
+    a,
+    d6,
+    "group",
+    "A",
+    "2026-06-11T13:00:00.000Z",
+    2,
+    0,
+    "finished",
+  );
+  insertMatch(
+    db,
+    a,
+    d7,
+    "group",
+    "A",
+    "2026-06-11T16:00:00.000Z",
+    1,
+    0,
+    "finished",
+  );
+  insertMatch(
+    db,
+    b,
+    d8,
+    "group",
+    "A",
+    "2026-06-12T13:00:00.000Z",
+    3,
+    0,
+    "finished",
+  );
+  insertMatch(
+    db,
+    d9,
+    b,
+    "group",
+    "A",
+    "2026-06-12T16:00:00.000Z",
+    1,
+    0,
+    "finished",
+  );
+  insertMatch(
+    db,
+    c,
+    d10,
+    "group",
+    "A",
+    "2026-06-13T13:00:00.000Z",
+    4,
+    1,
+    "finished",
+  );
+  insertMatch(
+    db,
+    d6,
+    c,
+    "group",
+    "A",
+    "2026-06-13T16:00:00.000Z",
+    3,
+    0,
+    "finished",
+  );
+  insertMatch(
+    db,
+    d,
+    d7,
+    "group",
+    "A",
+    "2026-06-14T13:00:00.000Z",
+    2,
+    1,
+    "finished",
+  );
+  insertMatch(
+    db,
+    d8,
+    d,
+    "group",
+    "A",
+    "2026-06-14T16:00:00.000Z",
+    1,
+    0,
+    "finished",
+  );
+  insertMatch(
+    db,
+    e,
+    d9,
+    "group",
+    "A",
+    "2026-06-15T13:00:00.000Z",
+    2,
+    0,
+    "finished",
+  );
+  insertMatch(
+    db,
+    d10,
+    e,
+    "group",
+    "A",
+    "2026-06-15T16:00:00.000Z",
+    2,
+    0,
+    "finished",
+  );
 
   const standings = await getStandings(repo, "A");
   const realIds = [a, b, c, d, e];
@@ -419,12 +518,54 @@ test("getStandings sorts by points > goalDifference > goalsFor > teamName", asyn
 });
 
 test("computeStandings ignores non-finished and unscored matches", () => {
-  const home: TeamData = { id: 1, name: "Home", code: "HOM", group: "A", flagUrl: null };
-  const away: TeamData = { id: 2, name: "Away", code: "AWY", group: "A", flagUrl: null };
+  const home: TeamData = {
+    id: 1,
+    name: "Home",
+    code: "HOM",
+    group: "A",
+    flagUrl: null,
+  };
+  const away: TeamData = {
+    id: 2,
+    name: "Away",
+    code: "AWY",
+    group: "A",
+    flagUrl: null,
+  };
   const matches: MatchData[] = [
-    { id: 1, homeTeam: home, awayTeam: away, stage: "group", group: "A", kickoffTime: new Date(), homeScore: 3, awayScore: 0, status: "scheduled" },
-    { id: 2, homeTeam: home, awayTeam: away, stage: "group", group: "A", kickoffTime: new Date(), homeScore: null, awayScore: null, status: "finished" },
-    { id: 3, homeTeam: home, awayTeam: away, stage: "group", group: "A", kickoffTime: new Date(), homeScore: 1, awayScore: 1, status: "finished" },
+    {
+      id: 1,
+      homeTeam: home,
+      awayTeam: away,
+      stage: "group",
+      group: "A",
+      kickoffTime: new Date(),
+      homeScore: 3,
+      awayScore: 0,
+      status: "scheduled",
+    },
+    {
+      id: 2,
+      homeTeam: home,
+      awayTeam: away,
+      stage: "group",
+      group: "A",
+      kickoffTime: new Date(),
+      homeScore: null,
+      awayScore: null,
+      status: "finished",
+    },
+    {
+      id: 3,
+      homeTeam: home,
+      awayTeam: away,
+      stage: "group",
+      group: "A",
+      kickoffTime: new Date(),
+      homeScore: 1,
+      awayScore: 1,
+      status: "finished",
+    },
   ];
   const standings = computeStandings(matches);
   const byCode = new Map(standings.map((s) => [s.teamCode, s]));

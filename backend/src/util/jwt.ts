@@ -28,9 +28,7 @@ export function signJwt(
   const encodedHeader = base64UrlEncode(JSON.stringify(HEADER));
   const encodedPayload = base64UrlEncode(JSON.stringify(fullPayload));
   const signingInput = `${encodedHeader}.${encodedPayload}`;
-  const signature = createHmac("sha256", secret)
-    .update(signingInput)
-    .digest();
+  const signature = createHmac("sha256", secret).update(signingInput).digest();
   const encodedSignature = base64UrlEncode(signature);
   return `${signingInput}.${encodedSignature}`;
 }

@@ -12,10 +12,7 @@ export class AuthMiddleware {
   resolve(): KoaMiddleware {
     return async (ctx, next) => {
       const authHeader = ctx.headers.authorization;
-      if (
-        typeof authHeader !== "string" ||
-        !authHeader.startsWith("Bearer ")
-      ) {
+      if (typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
         throw unauthorizedError();
       }
       const token = authHeader.slice("Bearer ".length).trim();

@@ -10,10 +10,7 @@ import {
   type UserRepo,
   type UserRow,
 } from "../src/service/auth-logic.ts";
-import {
-  parseLoginInput,
-  parseRegisterInput,
-} from "../src/dto/auth.dto.ts";
+import { parseLoginInput, parseRegisterInput } from "../src/dto/auth.dto.ts";
 import { hashPassword, verifyPassword } from "../src/util/password.ts";
 import { signJwt, verifyJwt } from "../src/util/jwt.ts";
 import {
@@ -114,10 +111,7 @@ test("register rejects duplicate username (USERNAME_TAKEN)", async () => {
     (err: unknown) => {
       assert.ok(err instanceof Error);
       assert.equal((err as { status?: number }).status, 409);
-      assert.equal(
-        (err as { code?: string }).code,
-        "USERNAME_TAKEN",
-      );
+      assert.equal((err as { code?: string }).code, "USERNAME_TAKEN");
       return true;
     },
   );
@@ -155,10 +149,7 @@ test("login with wrong password fails (INVALID_CREDENTIALS)", async () => {
     (err: unknown) => {
       assert.ok(err instanceof Error);
       assert.equal((err as { status?: number }).status, 401);
-      assert.equal(
-        (err as { code?: string }).code,
-        "INVALID_CREDENTIALS",
-      );
+      assert.equal((err as { code?: string }).code, "INVALID_CREDENTIALS");
       return true;
     },
   );

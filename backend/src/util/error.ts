@@ -44,3 +44,11 @@ export function invalidCredentialsError(): MidwayHttpError {
 export function validationError(message: string): MidwayHttpError {
   return createError(ErrorCodes.VALIDATION_ERROR, message, 400);
 }
+
+export function predictionLockedError(): MidwayHttpError {
+  return createError(
+    ErrorCodes.PREDICTION_LOCKED,
+    "比赛已开始，无法修改预测",
+    409,
+  );
+}

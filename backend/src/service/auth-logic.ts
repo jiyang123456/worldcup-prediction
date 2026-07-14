@@ -15,7 +15,11 @@ export interface UserRow {
 
 export interface UserRepo {
   findByUsername(username: string): Promise<UserRow | null>;
-  insert(username: string, passwordHash: string, role: string): Promise<UserRow>;
+  insert(
+    username: string,
+    passwordHash: string,
+    role: string,
+  ): Promise<UserRow>;
   findById(id: number): Promise<UserRow | null>;
 }
 
