@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port ${FRONTEND_PORT:-3000}",
+    "dev": "cross-env PORT=3000 next dev",
     "build": "next build --webpack",
-    "start": "next start --port ${FRONTEND_PORT:-3000}",
+    "start": "cross-env PORT=3000 next start",
     "lint": "eslint .",
     "test": "node --test test/*.test.mjs"
   },
@@ -17,6 +17,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "^24.0.0",
+    "cross-env": "^10.1.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.39.0",
