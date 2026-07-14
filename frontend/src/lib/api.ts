@@ -1,4 +1,4 @@
-import type { ApiError } from "@/lib/types";
+import type { ApiError, ApiErrorCode } from "@/lib/types";
 
 const TOKEN_KEY = "wc_token";
 
@@ -23,6 +23,17 @@ export function clearToken(): void {
   window.localStorage.removeItem(TOKEN_KEY);
 }
 
+export class ApiRequestError extends Error {
+  constructor(
+    public status: number,
+    public code: ApiErrorCode | null,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiRequestError";
+  }
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -44,15 +55,19 @@ async function request<T>(
 
   if (!response.ok) {
     let message = `请求失败 (${response.status})`;
+    let code: ApiErrorCode | null = null;
     try {
       const errorBody = (await response.json()) as ApiError;
       if (errorBody?.error?.message) {
         message = errorBody.error.message;
       }
+      if (errorBody?.error?.code) {
+        code = errorBody.error.code;
+      }
     } catch {
       // 响应体无法解析为 JSON 时回退到默认消息
     }
-    throw new Error(message);
+    throw new ApiRequestError(response.status, code, message);
   }
 
   return (await response.json()) as T;

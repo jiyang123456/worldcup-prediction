@@ -53,7 +53,7 @@ export function NavBar() {
               </Link>
               {user.role === "admin" && (
                 <Link
-                  href="/admin/results"
+                  href="/admin/matches"
                   className="text-slate-600 transition hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700"
                 >
                   结果录入
