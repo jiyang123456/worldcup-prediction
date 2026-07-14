@@ -14,7 +14,10 @@
     "@midwayjs/bootstrap": "^4.2.1",
     "@midwayjs/core": "^4.2.1",
     "@midwayjs/koa": "^4.2.1",
-    "@midwayjs/logger": "^4.0.1"
+    "@midwayjs/logger": "^4.0.1",
+    "@midwayjs/typeorm": "^4.2.1",
+    "better-sqlite3": "^12.11.1",
+    "typeorm": "^1.1.0"
   },
   "devDependencies": {
     "@midwayjs/mock": "^4.2.1",
