@@ -1,4 +1,4 @@
-import { Config, Provide } from "@midwayjs/core";
+import { Config, Provide, Scope, ScopeEnum } from "@midwayjs/core";
 import { InjectDataSource } from "@midwayjs/typeorm";
 import { DataSource } from "typeorm";
 import { User } from "../entity/user.entity";
@@ -23,6 +23,7 @@ import type {
 import type { JwtPayload } from "../util/jwt";
 
 @Provide()
+@Scope(ScopeEnum.Request, { allowDowngrade: true })
 export class AuthService {
   @InjectDataSource()
   dataSource: DataSource;
