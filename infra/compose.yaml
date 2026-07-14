@@ -4,7 +4,6 @@ services:
       context: ..
       dockerfile: infra/frontend.Dockerfile
     environment:
-      FRONTEND_PORT: 3000
       BACKEND_INTERNAL_URL: http://backend:7001
     ports:
       - "3000:3000"
@@ -18,9 +17,11 @@ services:
       dockerfile: infra/backend.Dockerfile
     environment:
       BACKEND_PORT: 7001
-      DATABASE_PATH: /app/backend/data/course-demo.sqlite
+      DATABASE_PATH: /app/backend/data/worldcup.sqlite
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      NODE_ENV: production
     volumes:
-      - course-data:/app/backend/data
+      - worldcup-data:/app/backend/data
     healthcheck:
       test:
         [
@@ -34,4 +35,4 @@ services:
       retries: 10
 
 volumes:
-  course-data:
+  worldcup-data:
