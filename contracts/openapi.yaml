@@ -1,14 +1,47 @@
 openapi: 3.1.0
 info:
-  title: Web Development Course API
-  version: 0.1.0
+  title: World Cup Prediction Platform API
+  version: 1.0.0
+  description: |
+    HTTP API contract for the 2026 World Cup match info and interactive
+    prediction platform. Covers auth, matches, standings, knockout bracket,
+    teams, predictions (with concurrency control), comments, favorites, and
+    admin match result entry.
+
+    `contracts/openapi.yaml` is the single source of truth for the HTTP
+    boundary; controllers, DTOs, frontend types, mocks, docs and tests must
+    stay consistent with it.
+  contact:
+    name: World Cup Prediction Platform
 servers:
   - url: http://localhost:7001
+    description: Local backend (Midway.js)
+  - url: http://localhost:3000
+    description: Local frontend rewrite proxy (/api/* → backend)
+
+tags:
+  - name: Auth
+    description: User registration, login, and current user
+  - name: Matches
+    description: Match schedule, standings, knockout bracket, and teams
+  - name: Predictions
+    description: Score predictions with concurrency control (auth required)
+  - name: Comments
+    description: Per-match discussion
+  - name: Favorites
+    description: Bookmarked matches (auth required)
+  - name: Admin
+    description: Admin-only match result entry
+  - name: System
+    description: Health checks
+
 paths:
   /api/health:
     get:
       operationId: getHealth
+      tags: [System]
       summary: 检查 API 状态
+      security: []
       responses:
         "200":
           description: API 正常
@@ -16,81 +49,1018 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Health"
-  /api/courses:
-    get:
-      operationId: listCourses
-      summary: 获取课程列表
-      responses:
-        "200":
-          description: 课程列表
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data]
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Course"
+
+  /api/auth/register:
     post:
-      operationId: createCourse
-      summary: 创建课程
+      operationId: register
+      tags: [Auth]
+      summary: 注册新用户并签发 JWT
+      security: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-06]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateCourse"
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: 注册成功，返回 JWT 与用户信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: 请求体不符合注册规则（用户名长度、密码长度）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: 用户名已存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/auth/login:
+    post:
+      operationId: login
+      tags: [Auth]
+      summary: 登录并签发 JWT
+      security: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-06]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
       responses:
         "200":
-          description: 创建成功
+          description: 登录成功，返回 JWT 与用户信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: 用户名或密码错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [Auth]
+      summary: 获取当前登录用户信息
+      security:
+        - BearerAuth: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-06]
+      responses:
+        "200":
+          description: 当前用户信息
           content:
             application/json:
               schema:
                 type: object
                 required: [data]
+                additionalProperties: false
                 properties:
                   data:
-                    $ref: "#/components/schemas/Course"
+                    $ref: "#/components/schemas/User"
+        "401":
+          description: 未认证或 token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/matches:
+    get:
+      operationId: listMatches
+      tags: [Matches]
+      summary: 获取比赛列表，支持按阶段与状态筛选
+      security: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-08]
+      parameters:
+        - name: stage
+          in: query
+          required: false
+          description: 按比赛阶段筛选
+          schema:
+            type: string
+            enum: [group, r32, r16, qf, sf, third, final]
+        - name: status
+          in: query
+          required: false
+          description: 按比赛状态筛选
+          schema:
+            type: string
+            enum: [scheduled, live, finished]
+      responses:
+        "200":
+          description: 比赛列表（无匹配项返回空数组）
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Match"
+
+  /api/matches/{id}:
+    get:
+      operationId: getMatchById
+      tags: [Matches]
+      summary: 获取比赛详情
+      security: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-08]
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: 比赛详情
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Match"
+        "404":
+          description: 比赛不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/standings:
+    get:
+      operationId: getStandings
+      tags: [Matches]
+      summary: 获取小组积分榜，支持按小组筛选
+      security: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-09, BR-10]
+      parameters:
+        - name: group
+          in: query
+          required: false
+          description: 按小组筛选（A-L）
+          schema:
+            type: string
+            enum: [A, B, C, D, E, F, G, H, I, J, K, L]
+      responses:
+        "200":
+          description: 积分榜列表（无匹配项返回空数组）
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Standing"
+
+  /api/knockout:
+    get:
+      operationId: getKnockout
+      tags: [Matches]
+      summary: 获取淘汰赛对阵图
+      security: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-08]
+      responses:
+        "200":
+          description: 按阶段分组的淘汰赛对阵
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/KnockoutBracket"
+
+  /api/teams:
+    get:
+      operationId: listTeams
+      tags: [Matches]
+      summary: 获取球队列表
+      security: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-08]
+      responses:
+        "200":
+          description: 球队列表
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Team"
+
+  /api/teams/{id}:
+    get:
+      operationId: getTeamById
+      tags: [Matches]
+      summary: 获取球队详情
+      security: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-08]
+      parameters:
+        - $ref: "#/components/parameters/TeamIdPath"
+      responses:
+        "200":
+          description: 球队详情
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Team"
+        "404":
+          description: 球队不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/predictions:
+    post:
+      operationId: submitPrediction
+      tags: [Predictions]
+      summary: 提交或更新比分预测（并发控制）
+      security:
+        - BearerAuth: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-01, BR-02, BR-03]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PredictionInput"
+      responses:
+        "201":
+          description: 预测提交或更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Prediction"
         "400":
-          description: 请求体不符合课程数据规则
+          description: 输入校验失败（matchId 非正整数、比分超出 0-20）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: 未认证或 token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: 比赛已开始或已结束，无法修改预测
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    get:
+      operationId: listMyPredictions
+      tags: [Predictions]
+      summary: 获取当前用户的预测列表
+      security:
+        - BearerAuth: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-01]
+      responses:
+        "200":
+          description: 当前用户的预测列表（无预测返回空数组）
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Prediction"
+        "401":
+          description: 未认证或 token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/predictions/{matchId}:
+    get:
+      operationId: getPredictionByMatch
+      tags: [Predictions]
+      summary: 查看当前用户对某场比赛的预测
+      security:
+        - BearerAuth: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-01]
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: |
+            当前用户对该场比赛的预测；未预测时 data 为 null。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/Prediction"
+                      - type: "null"
+        "401":
+          description: 未认证或 token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/comments/{matchId}:
+    get:
+      operationId: listCommentsByMatch
+      tags: [Comments]
+      summary: 获取比赛评论列表（公开）
+      security: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-08]
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: 评论列表（无评论返回空数组）
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Comment"
+
+  /api/comments:
+    post:
+      operationId: createComment
+      tags: [Comments]
+      summary: 发表评论（需认证）
+      security:
+        - BearerAuth: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-08]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentInput"
+      responses:
+        "201":
+          description: 评论发表成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Comment"
+        "400":
+          description: 输入校验失败（matchId 非正整数、内容为空或超过 500 字符）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: 未认证或 token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/favorites:
+    post:
+      operationId: addFavorite
+      tags: [Favorites]
+      summary: 收藏比赛（幂等）
+      security:
+        - BearerAuth: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-08]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FavoriteInput"
+      responses:
+        "201":
+          description: 收藏成功（已收藏时幂等返回已有记录）
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Favorite"
+        "400":
+          description: 输入校验失败（matchId 非正整数）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: 未认证或 token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    get:
+      operationId: listMyFavorites
+      tags: [Favorites]
+      summary: 获取当前用户的收藏列表
+      security:
+        - BearerAuth: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-08]
+      responses:
+        "200":
+          description: 当前用户的收藏列表（无收藏返回空数组）
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Favorite"
+        "401":
+          description: 未认证或 token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/favorites/{matchId}:
+    delete:
+      operationId: removeFavorite
+      tags: [Favorites]
+      summary: 取消收藏比赛
+      security:
+        - BearerAuth: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-08]
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      responses:
+        "200":
+          description: 取消收藏成功（未收藏时幂等返回成功）
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    type: object
+                    required: [success]
+                    additionalProperties: false
+                    properties:
+                      success:
+                        type: boolean
+                        const: true
+        "401":
+          description: 未认证或 token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/admin/matches/{id}/result:
+    patch:
+      operationId: updateMatchResult
+      tags: [Admin]
+      summary: 管理员录入比赛结果并触发预测得分计算
+      security:
+        - BearerAuth: []
+      x-spec:
+        file: docs/superpowers/specs/2026-07-14-worldcup-prediction-platform-design.md
+        acceptanceCriteria: [BR-04, BR-05, BR-07, BR-08]
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MatchResultInput"
+      responses:
+        "200":
+          description: 比赛结果录入成功，返回更新后的比赛
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Match"
+        "400":
+          description: 输入校验失败（比分超出 0-20）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: 未认证或 token 无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: 已认证但非管理员
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: 比赛不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
 components:
+  parameters:
+    MatchIdPath:
+      name: id
+      in: path
+      required: true
+      description: 比赛 ID
+      schema:
+        type: integer
+        minimum: 1
+    TeamIdPath:
+      name: id
+      in: path
+      required: true
+      description: 球队 ID
+      schema:
+        type: integer
+        minimum: 1
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT Bearer token obtained from `/api/auth/register` or
+        `/api/auth/login`. Send as `Authorization: Bearer <token>`.
+
   schemas:
     Health:
       type: object
       required: [status, service, timestamp]
+      additionalProperties: false
       properties:
         status:
+          type: string
           const: ok
         service:
           type: string
         timestamp:
           type: string
           format: date-time
-    Course:
+
+    User:
       type: object
-      required: [id, title, description, createdAt]
+      required: [id, username, role]
+      additionalProperties: false
       properties:
         id:
           type: integer
-        title:
+          minimum: 1
+        username:
           type: string
-        description:
+          minLength: 2
+          maxLength: 30
+        role:
           type: string
+          enum: [user, admin]
+
+    Team:
+      type: object
+      required: [id, name, code, group, flagUrl, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+        code:
+          type: string
+          pattern: ^[A-Z]{3}$
+        group:
+          type: string
+          enum: [A, B, C, D, E, F, G, H, I, J, K, L]
+          nullable: true
+          description: 小组赛球队所属小组；淘汰赛球队为 null
+        flagUrl:
+          type: string
+          format: uri
+          nullable: true
         createdAt:
           type: string
           format: date-time
-    CreateCourse:
+
+    Match:
       type: object
+      required:
+        [id, homeTeam, awayTeam, stage, group, kickoffTime, homeScore, awayScore, status, createdAt]
       additionalProperties: false
-      required: [title, description]
       properties:
-        title:
+        id:
+          type: integer
+          minimum: 1
+        homeTeam:
+          $ref: "#/components/schemas/Team"
+        awayTeam:
+          $ref: "#/components/schemas/Team"
+        stage:
           type: string
-          minLength: 2
-          maxLength: 80
-        description:
+          enum: [group, r32, r16, qf, sf, third, final]
+        group:
           type: string
-          minLength: 2
+          enum: [A, B, C, D, E, F, G, H, I, J, K, L]
+          nullable: true
+          description: 仅小组赛有值；淘汰赛为 null
+        kickoffTime:
+          type: string
+          format: date-time
+        homeScore:
+          type: integer
+          minimum: 0
+          maximum: 20
+          nullable: true
+          description: 未录入结果时为 null
+        awayScore:
+          type: integer
+          minimum: 0
+          maximum: 20
+          nullable: true
+          description: 未录入结果时为 null
+        status:
+          type: string
+          enum: [scheduled, live, finished]
+        createdAt:
+          type: string
+          format: date-time
+
+    Prediction:
+      type: object
+      required: [id, userId, matchId, homeScore, awayScore, points, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        userId:
+          type: integer
+          minimum: 1
+        matchId:
+          type: integer
+          minimum: 1
+        homeScore:
+          type: integer
+          minimum: 0
+          maximum: 20
+        awayScore:
+          type: integer
+          minimum: 0
+          maximum: 20
+        points:
+          type: integer
+          minimum: 0
+          maximum: 3
+          nullable: true
+          description: 比赛结束后计算；未结束时为 null
+        createdAt:
+          type: string
+          format: date-time
+
+    Comment:
+      type: object
+      required: [id, userId, matchId, content, createdAt, user]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        userId:
+          type: integer
+          minimum: 1
+        matchId:
+          type: integer
+          minimum: 1
+        content:
+          type: string
+          minLength: 1
           maxLength: 500
+        createdAt:
+          type: string
+          format: date-time
+        user:
+          type: object
+          required: [id, username]
+          additionalProperties: false
+          properties:
+            id:
+              type: integer
+              minimum: 1
+            username:
+              type: string
+              minLength: 2
+              maxLength: 30
+
+    Favorite:
+      type: object
+      required: [id, userId, matchId, createdAt]
+      additionalProperties: false
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        userId:
+          type: integer
+          minimum: 1
+        matchId:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+
+    Standing:
+      type: object
+      required:
+        [teamId, teamName, teamCode, flagUrl, played, won, drawn, lost, goalsFor, goalsAgainst, goalDifference, points]
+      additionalProperties: false
+      properties:
+        teamId:
+          type: integer
+          minimum: 1
+        teamName:
+          type: string
+        teamCode:
+          type: string
+          pattern: ^[A-Z]{3}$
+        flagUrl:
+          type: string
+          format: uri
+          nullable: true
+        played:
+          type: integer
+          minimum: 0
+        won:
+          type: integer
+          minimum: 0
+        drawn:
+          type: integer
+          minimum: 0
+        lost:
+          type: integer
+          minimum: 0
+        goalsFor:
+          type: integer
+          minimum: 0
+        goalsAgainst:
+          type: integer
+          minimum: 0
+        goalDifference:
+          type: integer
+        points:
+          type: integer
+          minimum: 0
+
+    KnockoutBracket:
+      type: object
+      required: [r32, r16, qf, sf, third, final]
+      additionalProperties: false
+      properties:
+        r32:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+        r16:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+        qf:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+        sf:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+        third:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+        final:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+          description: JWT 访问令牌
+        user:
+          $ref: "#/components/schemas/User"
+
+    RegisterInput:
+      type: object
+      required: [username, password]
+      additionalProperties: false
+      properties:
+        username:
+          type: string
+          minLength: 2
+          maxLength: 30
+        password:
+          type: string
+          minLength: 6
+          maxLength: 100
+
+    LoginInput:
+      type: object
+      required: [username, password]
+      additionalProperties: false
+      properties:
+        username:
+          type: string
+          minLength: 2
+          maxLength: 30
+        password:
+          type: string
+          minLength: 6
+          maxLength: 100
+
+    PredictionInput:
+      type: object
+      required: [matchId, homeScore, awayScore]
+      additionalProperties: false
+      properties:
+        matchId:
+          type: integer
+          minimum: 1
+        homeScore:
+          type: integer
+          minimum: 0
+          maximum: 20
+        awayScore:
+          type: integer
+          minimum: 0
+          maximum: 20
+
+    CommentInput:
+      type: object
+      required: [matchId, content]
+      additionalProperties: false
+      properties:
+        matchId:
+          type: integer
+          minimum: 1
+        content:
+          type: string
+          minLength: 1
+          maxLength: 500
+
+    FavoriteInput:
+      type: object
+      required: [matchId]
+      additionalProperties: false
+      properties:
+        matchId:
+          type: integer
+          minimum: 1
+
+    MatchResultInput:
+      type: object
+      required: [homeScore, awayScore]
+      additionalProperties: false
+      properties:
+        homeScore:
+          type: integer
+          minimum: 0
+          maximum: 20
+        awayScore:
+          type: integer
+          minimum: 0
+          maximum: 20
+
+    Error:
+      type: object
+      required: [error, requestId]
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          additionalProperties: false
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+                - UNAUTHORIZED
+                - FORBIDDEN
+                - NOT_FOUND
+                - PREDICTION_LOCKED
+                - DUPLICATE_PREDICTION
+                - USERNAME_TAKEN
+                - INVALID_CREDENTIALS
+            message:
+              type: string
+              description: 面向用户的错误描述
+            details:
+              description: 可选字段级错误详情，不得泄露 SQL、堆栈或密钥
+        requestId:
+          type: string
+          description: 与响应头 X-Request-Id 一致的请求标识
