@@ -15,10 +15,26 @@ const databasePath = resolve(
 );
 mkdirSync(dirname(databasePath), { recursive: true });
 
+function resolveJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (secret) {
+    return secret;
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "JWT_SECRET must be set when NODE_ENV=production; refusing to start with a hardcoded fallback secret.",
+    );
+  }
+  console.warn(
+    "[config] JWT_SECRET is not set; using insecure development fallback. Do NOT use in production.",
+  );
+  return "worldcup-dev-secret-change-me";
+}
+
 export default {
   keys: "course-demo-development-key",
   jwt: {
-    secret: process.env.JWT_SECRET ?? "worldcup-dev-secret-change-me",
+    secret: resolveJwtSecret(),
   },
   koa: {
     port: Number(process.env.BACKEND_PORT ?? 7001),

@@ -3,7 +3,6 @@ import {
   Controller,
   createRequestParamDecorator,
   Get,
-  httpError,
   Inject,
   Post,
 } from "@midwayjs/core";
@@ -14,6 +13,7 @@ import {
   parseRegisterInput,
   type ContextUser,
 } from "../dto/auth.dto";
+import { unauthorizedError, validationError } from "../util/error";
 
 const Ctx = () => createRequestParamDecorator((ctx: unknown) => ctx);
 
@@ -30,7 +30,7 @@ export class AuthController {
     } catch (reason) {
       const message =
         reason instanceof Error ? reason.message : "请求参数不合法";
-      throw new httpError.BadRequestError(message);
+      throw validationError(message);
     }
     return await this.authService.register(input);
   }
@@ -43,7 +43,7 @@ export class AuthController {
     } catch (reason) {
       const message =
         reason instanceof Error ? reason.message : "请求参数不合法";
-      throw new httpError.BadRequestError(message);
+      throw validationError(message);
     }
     return await this.authService.login(input);
   }
@@ -52,11 +52,11 @@ export class AuthController {
   async me(@Ctx() ctx: { user?: ContextUser }) {
     const user = ctx.user;
     if (!user) {
-      throw new httpError.UnauthorizedError("未认证");
+      throw unauthorizedError();
     }
     const fullUser = await this.authService.findById(user.id);
     if (!fullUser) {
-      throw new httpError.UnauthorizedError("用户不存在");
+      throw unauthorizedError();
     }
     return { data: fullUser };
   }
