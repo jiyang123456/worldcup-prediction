@@ -1,3 +1,5 @@
+import type { DatabaseSync } from "node:sqlite";
+
 export interface TeamData {
   id: number;
   name: string;
@@ -235,4 +237,117 @@ export async function updateMatchResult(
   awayScore: number,
 ): Promise<MatchData | null> {
   return repo.updateMatchResult(id, homeScore, awayScore);
+}
+
+interface MatchRow {
+  id: number;
+  home_team_id: number;
+  away_team_id: number;
+  stage: string;
+  group: string | null;
+  kickoff_time: string;
+  home_score: number | null;
+  away_score: number | null;
+  status: string;
+}
+
+interface TeamRow {
+  id: number;
+  name: string;
+  code: string;
+  group_name: string | null;
+  flag_url: string | null;
+}
+
+interface MatchDbRow extends MatchRow {
+  ht_name: string;
+  ht_code: string;
+  ht_group: string | null;
+  ht_flag: string | null;
+  at_name: string;
+  at_code: string;
+  at_group: string | null;
+  at_flag: string | null;
+}
+
+export function createMatchRepo(db: DatabaseSync): MatchRepo {
+  return {
+    async findMatches(stage?: string, status?: string): Promise<MatchData[]> {
+      let sql = `
+        SELECT m.*, 
+          ht.name AS ht_name, ht.code AS ht_code, ht.group_name AS ht_group, ht.flag_url AS ht_flag,
+          at.name AS at_name, at.code AS at_code, at.group_name AS at_group, at.flag_url AS at_flag
+        FROM matches m
+        LEFT JOIN teams ht ON m.home_team_id = ht.id
+        LEFT JOIN teams at ON m.away_team_id = at.id
+        WHERE 1=1
+      `;
+      const params: (string | number)[] = [];
+      if (stage) { sql += " AND m.stage = ?"; params.push(stage); }
+      if (status) { sql += " AND m.status = ?"; params.push(status); }
+      sql += " ORDER BY m.kickoff_time ASC";
+      const rows = db.prepare(sql).all(...params) as unknown as MatchDbRow[];
+      return rows.map(mapMatchRow);
+    },
+    async findMatchById(id: number): Promise<MatchData | null> {
+      const sql = `
+        SELECT m.*, 
+          ht.name AS ht_name, ht.code AS ht_code, ht.group_name AS ht_group, ht.flag_url AS ht_flag,
+          at.name AS at_name, at.code AS at_code, at.group_name AS at_group, at.flag_url AS at_flag
+        FROM matches m
+        LEFT JOIN teams ht ON m.home_team_id = ht.id
+        LEFT JOIN teams at ON m.away_team_id = at.id
+        WHERE m.id = ?
+      `;
+      const row = db.prepare(sql).get(id) as unknown as MatchDbRow | undefined;
+      return row ? mapMatchRow(row) : null;
+    },
+    async findFinishedGroupMatches(group?: string): Promise<MatchData[]> {
+      let sql = `
+        SELECT m.*, 
+          ht.name AS ht_name, ht.code AS ht_code, ht.group_name AS ht_group, ht.flag_url AS ht_flag,
+          at.name AS at_name, at.code AS at_code, at.group_name AS at_group, at.flag_url AS at_flag
+        FROM matches m
+        LEFT JOIN teams ht ON m.home_team_id = ht.id
+        LEFT JOIN teams at ON m.away_team_id = at.id
+        WHERE m.stage = 'group' AND m.status = 'finished'
+      `;
+      const params: (string | number)[] = [];
+      if (group) { sql += " AND m.\"group\" = ?"; params.push(group); }
+      const rows = db.prepare(sql).all(...params) as unknown as MatchDbRow[];
+      return rows.map(mapMatchRow);
+    },
+    async findAllTeams(): Promise<TeamData[]> {
+      const rows = db.prepare("SELECT * FROM teams ORDER BY name ASC").all() as unknown as TeamRow[];
+      return rows.map((r): TeamData => ({
+        id: r.id, name: r.name, code: r.code, group: r.group_name, flagUrl: r.flag_url,
+      }));
+    },
+    async findTeamById(id: number): Promise<TeamData | null> {
+      const row = db.prepare("SELECT * FROM teams WHERE id = ?").get(id) as unknown as TeamRow | undefined;
+      if (!row) return null;
+      return { id: row.id, name: row.name, code: row.code, group: row.group_name, flagUrl: row.flag_url };
+    },
+    async updateMatchResult(id: number, homeScore: number, awayScore: number): Promise<MatchData | null> {
+      const result = db.prepare(
+        "UPDATE matches SET home_score = ?, away_score = ?, status = 'finished' WHERE id = ?"
+      ).run(homeScore, awayScore, id);
+      if (result.changes === 0) return null;
+      return this.findMatchById(id);
+    },
+  };
+}
+
+function mapMatchRow(r: MatchDbRow): MatchData {
+  return {
+    id: r.id,
+    homeTeam: { id: r.home_team_id, name: r.ht_name, code: r.ht_code, group: r.ht_group, flagUrl: r.ht_flag },
+    awayTeam: { id: r.away_team_id, name: r.at_name, code: r.at_code, group: r.at_group, flagUrl: r.at_flag },
+    stage: r.stage,
+    group: r.group,
+    kickoffTime: new Date(r.kickoff_time),
+    homeScore: r.home_score,
+    awayScore: r.away_score,
+    status: r.status,
+  };
 }
