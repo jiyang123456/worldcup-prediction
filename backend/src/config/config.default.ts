@@ -17,6 +17,9 @@ mkdirSync(dirname(databasePath), { recursive: true });
 
 export default {
   keys: "course-demo-development-key",
+  jwt: {
+    secret: process.env.JWT_SECRET ?? "worldcup-dev-secret-change-me",
+  },
   koa: {
     port: Number(process.env.BACKEND_PORT ?? 7001),
   },
