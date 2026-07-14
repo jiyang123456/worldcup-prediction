@@ -1,19 +1,26 @@
 import { fetchBackend } from "@/lib/ssr";
 import { KnockoutBracket } from "@/components/knockout-bracket";
 import { StateHandler } from "@/components/state-handler";
-import type { KnockoutBracket as KnockoutBracketData } from "@/lib/types";
+import type { Match } from "@/lib/types";
+
+const KNOCKOUT_STAGES = ["r32", "r16", "qf", "sf", "third", "final"] as const;
 
 export default async function KnockoutPage() {
-  let bracket: KnockoutBracketData | null = null;
+  let matches: Match[] = [];
   let failed = false;
   try {
-    bracket = await fetchBackend<KnockoutBracketData>("/api/knockout");
+    const allMatches = await fetchBackend<Match[]>("/api/matches");
+    matches = allMatches.filter((m) => KNOCKOUT_STAGES.includes(m.stage as typeof KNOCKOUT_STAGES[number]));
   } catch {
     failed = true;
   }
-  const hasMatches = bracket
-    ? Object.values(bracket).some((matches) => matches.length > 0)
-    : false;
+
+  const bracket: Record<string, Match[]> = {};
+  for (const stage of KNOCKOUT_STAGES) {
+    bracket[stage] = matches.filter((m) => m.stage === stage);
+  }
+
+  const hasMatches = Object.values(bracket).some((arr) => arr.length > 0);
   const status = failed ? "error" : hasMatches ? "success" : "empty";
 
   return (
@@ -24,7 +31,7 @@ export default async function KnockoutPage() {
         empty="淘汰赛对阵尚未生成。"
         error="无法加载淘汰赛数据，请稍后重试。"
       >
-        {bracket ? <KnockoutBracket bracket={bracket} /> : null}
+        <KnockoutBracket bracket={bracket} />
       </StateHandler>
     </main>
   );

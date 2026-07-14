@@ -1,8 +1,8 @@
-import type { KnockoutBracket as KnockoutBracketData } from "@/lib/types";
+import type { Match } from "@/lib/types";
 import { stageLabel } from "@/lib/format";
 import { MatchCard } from "@/components/match-card";
 
-const stages: { key: keyof KnockoutBracketData; label: string }[] = [
+const stages: { key: string; label: string }[] = [
   { key: "r32", label: stageLabel("r32") },
   { key: "r16", label: stageLabel("r16") },
   { key: "qf", label: stageLabel("qf") },
@@ -11,7 +11,7 @@ const stages: { key: keyof KnockoutBracketData; label: string }[] = [
   { key: "final", label: stageLabel("final") },
 ];
 
-export function KnockoutBracket({ bracket }: { bracket: KnockoutBracketData }) {
+export function KnockoutBracket({ bracket }: { bracket: Record<string, Match[]> }) {
   return (
     <div className="space-y-10">
       {stages.map(({ key, label }) => {
