@@ -83,23 +83,21 @@ export class SeedService {
     const allTeams = await teamRepo.find();
     const codeToTeam = new Map(allTeams.map((t) => [t.code, t]));
 
-    const matches = seedMatches.map((m) => {
-      const match = new Match();
-      const home = codeToTeam.get(m.homeTeamCode);
-      const away = codeToTeam.get(m.awayTeamCode);
+    const matches = seedMatches.flatMap((m) => {
+      const home = codeToTeam.get(m.homeCode);
+      const away = codeToTeam.get(m.awayCode);
       if (!home || !away) {
-        throw new Error(
-          `Team not found for match: ${m.homeTeamCode} vs ${m.awayTeamCode}`,
-        );
+        return [];
       }
+      const match = new Match();
       match.homeTeam = home;
       match.awayTeam = away;
       match.stage = m.stage;
       match.group = m.group;
       match.kickoffTime = new Date(m.kickoffTime);
-      match.homeScore = null;
-      match.awayScore = null;
-      match.status = "scheduled";
+      match.homeScore = m.homeScore;
+      match.awayScore = m.awayScore;
+      match.status = m.status;
       return match;
     });
     await matchRepo.save(matches);
