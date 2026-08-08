@@ -4,8 +4,8 @@
 
 1. GitHub 仓库地址
 ----------------------------------------------------------------
-https://github.com/webdevnju/webdev-template
-（如为私有仓库，已邀请 sunshinezxf@hotmail.com）
+https://github.com/jiyang123456/worldcup-prediction
+（如为私有仓库，请邀请 sunshinezxf@hotmail.com 为协作者）
 
 
 2. Docker Image / Docker Compose 启动命令
@@ -52,10 +52,11 @@ https://github.com/webdevnju/webdev-template
   球队国旗使用外部 CDN 图片 (flagcdn.com)，无需本地挂载。
 
 
-4. Web 服务公网访问地址（如有）
+4. Web 服务公网访问地址
 ----------------------------------------------------------------
-（待部署后填写）
-阿里云服务器部署地址：_______________
+http://47.96.229.179
+
+默认管理员账号：admin / admin123
 
 
 5. 课程中印象最深刻的内容（可选）
@@ -86,7 +87,7 @@ https://github.com/webdevnju/webdev-template
 - 后端：Midway.js 4 + TypeORM + SQLite + TypeScript
 - 认证：JWT (node:crypto HMAC-SHA256)
 - Agent：MCP Server (8 个查询工具)
-- 部署：Docker Compose (node:24-alpine, linux/amd64)
+- 部署：Docker Compose (node:24, linux/amd64)
 - 契约：OpenAPI 3.1 (contracts/openapi.yaml)
 
 

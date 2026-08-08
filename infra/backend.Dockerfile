@@ -1,4 +1,4 @@
-FROM node:24-alpine AS build
+FROM node:24 AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY frontend/package.json frontend/package.json
@@ -7,7 +7,7 @@ RUN npm ci
 COPY backend backend
 RUN npm run build --workspace backend
 
-FROM node:24-alpine AS runtime
+FROM node:24-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/package.json /app/package-lock.json ./

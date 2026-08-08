@@ -1,4 +1,4 @@
-FROM node:24-alpine AS build
+FROM node:24 AS build
 WORKDIR /app
 ARG BACKEND_INTERNAL_URL=http://backend:7001
 ENV BACKEND_INTERNAL_URL=$BACKEND_INTERNAL_URL
@@ -9,7 +9,7 @@ RUN npm ci
 COPY frontend frontend
 RUN npm run build --workspace frontend
 
-FROM node:24-alpine AS runtime
+FROM node:24-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/package.json /app/package-lock.json ./
