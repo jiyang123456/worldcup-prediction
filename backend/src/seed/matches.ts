@@ -182,20 +182,20 @@ export const seedMatches: SeedMatch[] = [
   { homeCode: "ARG", awayCode: "SUI", stage: "qf", group: null, kickoffTime: "2026-07-11T18:00:00Z", homeScore: 3, awayScore: 1, status: "finished" },
 
   // ============================================================
-  // SEMIFINALS
+  // SEMIFINALS (reset to scheduled for demo)
   // ============================================================
 
-  // Match 101: France 0-2 Spain
-  { homeCode: "FRA", awayCode: "ESP", stage: "sf", group: null, kickoffTime: "2026-07-14T19:00:00Z", homeScore: 0, awayScore: 2, status: "finished" },
-  // Match 102: England 1-2 Argentina
-  { homeCode: "ENG", awayCode: "ARG", stage: "sf", group: null, kickoffTime: "2026-07-15T19:00:00Z", homeScore: 1, awayScore: 2, status: "finished" },
+  // Match 101: France vs Spain
+  { homeCode: "FRA", awayCode: "ESP", stage: "sf", group: null, kickoffTime: "2026-12-14T19:00:00Z", homeScore: null, awayScore: null, status: "scheduled" },
+  // Match 102: England vs Argentina
+  { homeCode: "ENG", awayCode: "ARG", stage: "sf", group: null, kickoffTime: "2026-12-15T19:00:00Z", homeScore: null, awayScore: null, status: "scheduled" },
 
   // ============================================================
-  // THIRD PLACE + FINAL
+  // THIRD PLACE + FINAL (reset to scheduled for demo)
   // ============================================================
 
-  // Match 103: Third Place - France 4-6 England
-  { homeCode: "FRA", awayCode: "ENG", stage: "third", group: null, kickoffTime: "2026-07-18T21:00:00Z", homeScore: 4, awayScore: 6, status: "finished" },
-  // Match 104: Final - Spain 1-0 Argentina (AET)
-  { homeCode: "ESP", awayCode: "ARG", stage: "final", group: null, kickoffTime: "2026-07-19T19:00:00Z", homeScore: 1, awayScore: 0, status: "finished" },
+  // Match 103: Third Place - TBD vs TBD
+  { homeCode: "TBD", awayCode: "TBD", stage: "third", group: null, kickoffTime: "2026-12-18T21:00:00Z", homeScore: null, awayScore: null, status: "scheduled" },
+  // Match 104: Final - TBD vs TBD
+  { homeCode: "TBD", awayCode: "TBD", stage: "final", group: null, kickoffTime: "2026-12-19T19:00:00Z", homeScore: null, awayScore: null, status: "scheduled" },
 ];
