@@ -8,6 +8,7 @@ const navLinks = [
   { href: "/matches", label: "比赛" },
   { href: "/standings", label: "积分榜" },
   { href: "/knockout", label: "淘汰赛" },
+  { href: "/bracket-predictor", label: "淘汰赛预测" },
   { href: "/teams", label: "球队" },
 ] as const;
 
